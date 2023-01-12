@@ -1,12 +1,14 @@
 package entitysource
 
 import (
+	"sync"
+
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sync"
 )
 
 type DeppyRegistryV1Cache struct {
@@ -34,7 +36,7 @@ func (r *DeppyRegistryV1Cache) StartCache() {
 			case watch.Deleted:
 				r.Mutex.Lock()
 				defer r.Mutex.Unlock()
-				delete(r.cache)
+				delete(r.cache, namespacedName(entry.Object))
 			case watch.Added:
 			case watch.Modified:
 			}
@@ -42,10 +44,10 @@ func (r *DeppyRegistryV1Cache) StartCache() {
 	}
 }
 
-func namespacedName(o *client.Object) string {
+func namespacedName(o runtime.Object) string {
 	catsrc, ok := o.(*v1alpha1.CatalogSource)
 	if !ok {
 		return ""
 	}
-	return types.NamespacedName{Namespace: catsrc.Namespace, Name: catsrc.Name}.String()
+	return types.NamespacedName{Namespace: catsrc.GetNamespace(), Name: catsrc.GetName()}.String()
 }
